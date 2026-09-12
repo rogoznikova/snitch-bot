@@ -1,3 +1,4 @@
+print('🚀 Bot started. Listening for callback queries...')
 #!/usr/bin/env python3
 """
 Telegram Bot Handler for Vapeshop - SIMPLE VERSION
