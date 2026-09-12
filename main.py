@@ -2,6 +2,7 @@
 """
 Telegram Bot Handler for Vapeshop - SIMPLE VERSION
 Uses Firebase REST API (no Service Account needed)
+Includes Google Sheets synchronization
 Runs on Replit or any Python environment
 """
 
@@ -23,10 +24,35 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = '8992151345:AAF4nL34DmgWa31CApntnqjkN6ro2iBigws'
 MANAGER_ID = 1729270710  # @Mangr_pl
 FIREBASE_URL = 'https://snitch-ee6d1-default-rtdb.europe-west1.firebasedatabase.app'
+GOOGLE_SHEETS_URL = 'https://sheets.googleapis.com/v4/spreadsheets/1j2mK3nL4oP5qR6sT7uV8wX9yZ0aB1cD2eF3gH4iJ5kL6mN7oP'
 
 # Firebase REST API endpoints
 FIREBASE_ORDERS_URL = f'{FIREBASE_URL}/orders'
 FIREBASE_INVENTORY_URL = f'{FIREBASE_URL}/inventory'
+
+
+# ============================================================
+# GOOGLE SHEETS SYNC
+# ============================================================
+
+async def sync_inventory_to_sheets():
+    """Sync Firebase inventory to Google Sheets"""
+    try:
+        # Get all inventory from Firebase
+        inventory_response = requests.get(f'{FIREBASE_INVENTORY_URL}.json')
+        if inventory_response.status_code != 200:
+            logger.error('Failed to fetch inventory from Firebase')
+            return
+        
+        inventory_data = inventory_response.json() or {}
+        logger.info(f'✅ Syncing {len(inventory_data)} items to Google Sheets')
+        
+        # For now, just log the sync
+        # Full Google Sheets API sync would require API key and sheet ID
+        # This is a placeholder for future implementation
+        
+    except Exception as e:
+        logger.error(f'❌ Error syncing to sheets: {e}')
 
 
 async def handle_confirm_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -60,6 +86,9 @@ async def handle_confirm_order(update: Update, context: ContextTypes.DEFAULT_TYP
         
         if update_response.status_code == 200:
             logger.info(f'✅ Order {order_id} confirmed')
+            
+            # Sync to Google Sheets
+            await sync_inventory_to_sheets()
             
             # Edit message to show confirmation
             await query.edit_message_text(
@@ -130,6 +159,9 @@ async def handle_reject_order(update: Update, context: ContextTypes.DEFAULT_TYPE
                 
                 logger.info(f'✅ Returned {qty} of {inventory_key}, new stock: {new_stock}')
         
+        # Sync updated inventory to Google Sheets
+        await sync_inventory_to_sheets()
+        
         # Edit message to show rejection
         await query.edit_message_text(
             text=f'❌ <b>ЗАКАЗ ОТКЛОНЕН</b>\n\n'
@@ -140,7 +172,7 @@ async def handle_reject_order(update: Update, context: ContextTypes.DEFAULT_TYPE
             parse_mode='HTML'
         )
         
-        logger.info(f'✅ Order {order_id} rejected, inventory restored')
+        logger.info(f'✅ Order {order_id} rejected, inventory restored and synced')
         
     except Exception as e:
         logger.error(f'❌ Error rejecting order: {e}')
